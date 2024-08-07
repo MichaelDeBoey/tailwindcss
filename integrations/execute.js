@@ -3,10 +3,12 @@ let path = require('path')
 let { spawn } = require('child_process')
 let resolveToolRoot = require('./resolve-tool-root')
 
-let runningProcessess = []
+let SHOW_OUTPUT = false
+
+let runningProcesses = []
 
 afterEach(() => {
-  runningProcessess.splice(0).forEach((runningProcess) => runningProcess.stop())
+  runningProcesses.splice(0).forEach((runningProcess) => runningProcess.stop())
 })
 
 function debounce(fn, ms) {
@@ -26,7 +28,7 @@ module.exports = function $(command, options = {}) {
   let args = options.shell
     ? [command]
     : (() => {
-        let args = command.split(' ')
+        let args = command.trim().split(/\s+/)
         command = args.shift()
         command =
           command === 'node'
@@ -92,6 +94,9 @@ module.exports = function $(command, options = {}) {
     let combined = ''
 
     child.stdout.on('data', (data) => {
+      if (SHOW_OUTPUT) {
+        console.log(data.toString())
+      }
       stdoutMessages.push(data.toString())
       notifyNextStdoutActor()
       stdout += data
@@ -99,6 +104,9 @@ module.exports = function $(command, options = {}) {
     })
 
     child.stderr.on('data', (data) => {
+      if (SHOW_OUTPUT) {
+        console.error(data.toString())
+      }
       stderrMessages.push(data.toString())
       notifyNextStderrActor()
       stderr += data
@@ -121,7 +129,7 @@ module.exports = function $(command, options = {}) {
     })
   })
 
-  runningProcessess.push(runningProcess)
+  runningProcesses.push(runningProcess)
 
   return Object.assign(runningProcess, {
     stop() {

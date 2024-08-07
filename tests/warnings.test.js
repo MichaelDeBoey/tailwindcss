@@ -1,76 +1,60 @@
-import log from '../src/util/log'
-import { crosscheck, run, html, css } from './util/run'
+import { run, html, css } from './util/run'
 
-crosscheck(() => {
-  let warn
+test('it warns when there is no content key', async () => {
+  let config = {
+    corePlugins: { preflight: false },
+  }
 
-  beforeEach(() => {
-    warn = jest.spyOn(log, 'warn')
-  })
+  let input = css`
+    @tailwind base;
+  `
 
-  afterEach(() => {
-    warn.mockClear()
-  })
+  await run(input, config)
 
-  test('it warns when there is no content key', async () => {
-    let config = {
-      corePlugins: { preflight: false },
-    }
+  expect().toHaveBeenWarnedWith(['content-problems'])
+})
 
-    let input = css`
-      @tailwind base;
-    `
+test('it warns when there is an empty content key', async () => {
+  let config = {
+    content: [],
+    corePlugins: { preflight: false },
+  }
 
-    await run(input, config)
+  let input = css`
+    @tailwind base;
+  `
 
-    expect(warn).toHaveBeenCalledTimes(1)
-    expect(warn.mock.calls.map((x) => x[0])).toEqual(['content-problems'])
-  })
+  await run(input, config)
 
-  test('it warns when there is an empty content key', async () => {
-    let config = {
-      content: [],
-      corePlugins: { preflight: false },
-    }
+  expect().toHaveBeenWarnedWith(['content-problems'])
+})
 
-    let input = css`
-      @tailwind base;
-    `
+test('it warns when there are no utilities generated', async () => {
+  let config = {
+    content: [{ raw: html`nothing here matching a utility` }],
+    corePlugins: { preflight: false },
+  }
 
-    await run(input, config)
+  let input = css`
+    @tailwind utilities;
+  `
 
-    expect(warn).toHaveBeenCalledTimes(1)
-    expect(warn.mock.calls.map((x) => x[0])).toEqual(['content-problems'])
-  })
+  await run(input, config)
 
-  test('it warns when there are no utilities generated', async () => {
-    let config = {
-      content: [{ raw: html`nothing here matching a utility` }],
-      corePlugins: { preflight: false },
-    }
+  expect().toHaveBeenWarnedWith(['content-problems'])
+})
 
-    let input = css`
-      @tailwind utilities;
-    `
+it('warnings are not thrown when only variant utilities are generated', async () => {
+  let config = {
+    content: [{ raw: html`<div class="sm:underline"></div>` }],
+    corePlugins: { preflight: false },
+  }
 
-    await run(input, config)
+  let input = css`
+    @tailwind utilities;
+  `
 
-    expect(warn).toHaveBeenCalledTimes(1)
-    expect(warn.mock.calls.map((x) => x[0])).toEqual(['content-problems'])
-  })
+  await run(input, config)
 
-  it('warnings are not thrown when only variant utilities are generated', async () => {
-    let config = {
-      content: [{ raw: html`<div class="sm:underline"></div>` }],
-      corePlugins: { preflight: false },
-    }
-
-    let input = css`
-      @tailwind utilities;
-    `
-
-    await run(input, config)
-
-    expect(warn).toHaveBeenCalledTimes(0)
-  })
+  expect().not.toHaveBeenWarned()
 })

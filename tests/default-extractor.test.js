@@ -41,6 +41,9 @@ const htmlExamples = html`
   <div class="[--y:theme(colors.blue.500)]">
   <div class="w-[calc(100%-theme('spacing.1'))]">
   <div class='w-[calc(100%-theme("spacing.2"))]'>
+  <div class='w-[calc(100%-theme("spacing[2]"))]'>
+  <div class='w-[calc(100%-theme(spacing[2]))]'>
+  <div class='[width:calc(theme(spacing[2])_+_theme(spacing[3])_+_theme(spacing[4]))]'>
 
   <script>
     let classes01 = ["text-[10px]"]
@@ -146,6 +149,10 @@ const includes = [
   `[--y:theme(colors.blue.500)]`,
   `w-[calc(100%-theme('spacing.1'))]`,
   `w-[calc(100%-theme("spacing.2"))]`,
+  `w-[calc(100%-theme("spacing.2"))]`,
+  `w-[calc(100%-theme("spacing[2]"))]`,
+  `w-[calc(100%-theme(spacing[2]))]`,
+  `[width:calc(theme(spacing[2])_+_theme(spacing[3])_+_theme(spacing[4]))]`,
   `border-[color:var(--color,theme(colors.cyan.500))]`,
   `translate-x-[var(--scroll-offset)]`,
   `font-[arbitrary,'arbitrary_with_space']`,
@@ -469,6 +476,49 @@ test('classes in slim templates', async () => {
   expect(extractions).toContain('text-gray-500')
 })
 
+test('classes in slim templates starting with number', async () => {
+  const extractions = defaultExtractor(`
+    .bg-green-300.2xl:bg-red-300
+      '(Look mom, no closing tag!)
+  `)
+
+  expect(extractions).toContain('bg-green-300')
+  expect(extractions).toContain('2xl:bg-red-300')
+})
+
+test('classes in slim templates with attributes added', () => {
+  let extractions = defaultExtractor(`
+    .ml-auto[
+      data-value='foo'
+    ]
+      Foo bar
+    .mr-auto[data-value='foo']
+      Foo bar
+    .mt-auto#omg
+      Foo bar
+    #omg.mb-auto
+      Foo bar
+  `)
+
+  expect(extractions).toContain(`ml-auto`)
+  expect(extractions).toContain(`mr-auto`)
+  expect(extractions).toContain(`mt-auto`)
+  expect(extractions).toContain(`mb-auto`)
+})
+
+test("classes with fractional numeric values don't also generate the whole number utility", async () => {
+  const extractions = defaultExtractor(`
+    <div class="px-1.5 py-2.75">Hello world!</div>
+  `)
+
+  expect(extractions).toContain('px-1.5')
+  expect(extractions).toContain('py-2.75')
+  expect(extractions).not.toContain('px-1')
+  expect(extractions).not.toContain('5')
+  expect(extractions).not.toContain('py-2')
+  expect(extractions).not.toContain('75')
+})
+
 test('multi-word + arbitrary values + quotes', async () => {
   const extractions = defaultExtractor(`
     grid-cols-['repeat(2)']
@@ -495,4 +545,34 @@ test('arbitrary properties followed by square bracketed stuff', () => {
   )
 
   expect(extractions).toContain(`[display:inherit]`)
+})
+
+it.each([
+  ['["min-w-[17rem]","max-w-[17rem]"]', ['min-w-[17rem]', 'max-w-[17rem]']],
+  [
+    '["w-[calc(theme(spacing[2]*-1px))]","h-[calc(theme(spacing[2]*-1px))]"]',
+    ['w-[calc(theme(spacing[2]*-1px))]', 'h-[calc(theme(spacing[2]*-1px))]'],
+  ],
+])('should work for issue #12371 (%#)', async (content, expectations) => {
+  let extractions = defaultExtractor(content)
+
+  for (let value of expectations) {
+    expect(extractions).toContain(value)
+  }
+})
+
+it.each([
+  ['@container', ['@container']],
+  ['@container/sidebar', ['@container/sidebar']],
+  ['@container/[sidebar]', ['@container/[sidebar]']],
+  ['@container-size', ['@container-size']],
+  ['@container-size/sidebar', ['@container-size/sidebar']],
+  ['@container-[size]/sidebar', ['@container-[size]/sidebar']],
+  ['@container-[size]/[sidebar]', ['@container-[size]/[sidebar]']],
+])('should support utilities starting with @ (%#)', async (content, expectations) => {
+  let extractions = defaultExtractor(content)
+
+  for (let value of expectations) {
+    expect(extractions).toContain(value)
+  }
 })

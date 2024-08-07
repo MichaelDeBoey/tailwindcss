@@ -11,10 +11,14 @@
     "displayName": "PostCSS CLI",
     "setupFilesAfterEnv": [
       "<rootDir>/../../jest/customMatchers.js"
-    ]
+    ],
+    "transform": {
+      "\\.js$": "@swc/jest",
+      "\\.ts$": "@swc/jest"
+    }
   },
   "devDependencies": {
-    "postcss": "^8.4.21",
-    "postcss-cli": "^9.1.0"
+    "postcss": "^8.4.23",
+    "postcss-cli": "^10.1.0"
   }
 }
